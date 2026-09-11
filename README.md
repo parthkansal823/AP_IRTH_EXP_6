@@ -2,82 +2,78 @@
 
 ## AIM
 
-To perform RAM forensics on the **`lasten.raw` Windows memory image** using **Volatility 3** and identify suspicious processes, files, PowerShell activity, persistence mechanisms, and network indicators.
+To perform memory forensics on a Windows memory image (`lasten.raw`) using **Volatility 3** and identify useful forensic artifacts such as operating-system information, processes, files, command lines, network activity, and suspicious PowerShell activity.
 
-## Tools Required
+---
+
+## TOOLS REQUIRED
 
 - Kali Linux
 - Python 3
 - Volatility 3
-- Windows memory image: `lasten.raw` [Download/View lasten Memory Image](https://drive.google.com/file/d/1hlxiV4N9y_7RvjyjkBtUdm2ZCUQUcXYK/view?usp=sharing)
+- Windows memory image: `lasten.raw` [Download lasten Memory Image](https://drive.google.com/file/d/1hlxiV4N9y_7RvjyjkBtUdm2ZCUQUcXYK/view?usp=sharing)
 - Terminal
-
-## Objectives
-
-1. To identify the operating system from the memory image.
-2. To analyze running and terminated processes.
-3. To examine the process tree and command-line arguments.
-4. To identify suspicious processes and files.
-5. To analyze network-related artifacts.
-6. To check suspicious memory regions.
-7. To search memory for malicious or suspicious strings.
-8. To identify persistence and reverse-shell indicators.
-
-## Theory
-
-**Memory forensics** is the process of analyzing the contents of RAM to obtain information about a computer system at a particular point in time.
-
-**Volatility 3** is an open-source memory-forensics framework used to analyze memory dumps. It can provide information about processes, network connections, files, command lines, and other artifacts present in memory.
+- Basic Linux commands such as `strings`, `grep`, and `file`
 
 ---
 
-# Procedure
+## OBJECTIVES
+
+1. To identify the operating system from the memory image.
+2. To list active and terminated processes.
+3. To examine the process hierarchy and command lines.
+4. To identify suspicious processes and files.
+5. To examine network artifacts.
+6. To search memory for suspicious PowerShell commands and persistence mechanisms.
+7. To correlate multiple artifacts and identify possible indicators of compromise (IOCs).
+
+---
+
+## THEORY
+
+**Memory forensics** is the process of examining the contents of RAM to recover information about a computer system at a particular point in time.
+
+**Volatility 3** is an open-source memory-forensics framework. It can be used to investigate processes, process relationships, command lines, network connections, files, memory regions, and other artifacts present in a memory image.
+
+In this experiment, the Windows memory image `lasten.raw` is analyzed using Volatility 3. The investigation is performed by first identifying the operating system, then examining processes and their relationships, followed by files, network artifacts, and suspicious strings.
+
+---
+
+# PROCEDURE
 
 ## Step 1: Install and Set Up Volatility 3
 
-First, update the package list and install the required Python tools.
-
-### Commands
-
-```bash
-sudo apt update
-sudo apt install python3 python3-pip python3-venv git -y
-```
-
-Clone Volatility 3:
+### Command
 
 ```bash
 cd ~/Desktop/Exp6
 git clone https://github.com/volatilityfoundation/volatility3.git
 cd volatility3
-```
 
-Create and activate a virtual environment:
-
-```bash
 python3 -m venv venv
 source venv/bin/activate
+
+pip install -e .
 ```
 
-Install Volatility 3:
+If Volatility 3 is already installed, only activate the existing environment:
 
 ```bash
-pip install -e .
+cd ~/Desktop/Exp6/volatility3
+source venv/bin/activate
 ```
 
 ### Observation
 
-The Volatility 3 framework and Python dependencies were installed successfully.
+The Volatility 3 environment was created and the framework was installed.
 
 ### Result
 
-The Volatility 3 environment was prepared for memory analysis.
+Volatility 3 was successfully prepared for memory analysis.
 
 ---
 
-## Step 2: Check Volatility Version
-
-Verify that Volatility 3 is working correctly.
+## Step 2: Check the Volatility Version
 
 ### Command
 
@@ -87,41 +83,17 @@ python3 vol.py --version
 
 ### Observation
 
-The installed Volatility 3 version was displayed. In this analysis, version **2.28.2** was used.
+The installed framework version was displayed.
 
 ### Result
 
-Volatility 3 was successfully installed and ready for memory analysis.
+Volatility 3 Framework **2.28.2** was available for the experiment.
 
 ---
 
-## Step 3: Verify the Memory Image
+## Step 3: Identify the Operating System
 
-Make sure the memory image is available in the Volatility directory.
-
-### Commands
-
-```bash
-ls -lh lasten.raw
-```
-
-```bash
-file lasten.raw
-```
-
-### Observation
-
-The `lasten.raw` memory image was present and available for analysis.
-
-### Result
-
-The memory image was successfully located and prepared for forensic analysis.
-
----
-
-## Step 4: Identify the Operating System
-
-The `windows.info` plugin was used to identify the operating-system information.
+The `windows.info` plugin was used first to determine the operating-system details of the memory image.
 
 ### Command
 
@@ -131,23 +103,23 @@ python3 vol.py -f lasten.raw windows.info
 
 ### Observation
 
-The memory image was identified as a **Windows 7 SP1 64-bit** system.
+The output identified the memory image as:
 
-Important information included:
-
-- Windows version: Windows 7 SP1
-- Architecture: 64-bit
-- Kernel information was successfully detected.
+- Windows 7
+- Service Pack 1
+- 64-bit system
+- Build information: `7601.17514.amd64fre.win7sp1_rtm`
+- System time: `2023-11-18 00:19:37 UTC`
 
 ### Result
 
-The operating system of the memory image was successfully identified as Windows 7 SP1 64-bit.
+The memory image was identified as a **Windows 7 SP1 64-bit** memory image.
 
 ---
 
-## Step 5: List Running Processes
+## Step 4: List Active Processes
 
-The `windows.pslist` plugin was used to list processes present in memory.
+The `windows.pslist` plugin was used to list processes present in the normal active process list.
 
 ### Command
 
@@ -157,30 +129,27 @@ python3 vol.py -f lasten.raw windows.pslist
 
 ### Observation
 
-Several processes were identified. Some important entries included:
+Several normal Windows processes were present. Some user-level processes were also observed, including:
 
-- `FIFA23.exe`
-- `notepad.exe`
-- `wampmanager.exe`
-- `mysqld.exe`
-- `DumpIt.exe`
-- `dllhost.exe`
+- `FIFA23.exe` — PID **1496**
+- `notepad.exe` — PID **3596**, with command line referring to:
+  `C:\Users\vboxuser\AppData\Local\backagainn.ps1`
+- `notepad.exe` — PID **1676**, opening:
+  `C:\Users\vboxuser\Desktop\InfoBank.txt`
+- `notepad.exe` — PID **3688**, opening:
+  `C:\Users\vboxuser\Desktop\Bank_Info.txt`
 
-A `notepad.exe` process was associated with:
-
-```text
-C:\Users\vboxuser\AppData\Local\backagainn.ps1
-```
+An unusual `dllhost.exe` process with PID **632** was also observed with an extremely large handle count.
 
 ### Result
 
-The active process list was successfully examined and suspicious artifacts were selected for further investigation.
+The active process list was obtained. User-level processes and unusual process characteristics were identified for further investigation.
 
 ---
 
-## Step 6: Scan for Terminated or Unlinked Processes
+## Step 5: Scan Memory for Process Objects
 
-The `windows.psscan` plugin was used because a process may no longer appear in the normal active process list.
+`windows.psscan` was used because a process may no longer appear in the normal process list after termination.
 
 ### Command
 
@@ -190,23 +159,31 @@ python3 vol.py -f lasten.raw windows.psscan
 
 ### Observation
 
-A process named **`notapadd.exe`** was identified:
+A process named:
 
-- PID: **2392**
-- Created: **2023-11-17 15:35:16 UTC**
-- Exited: **2023-11-17 15:35:38 UTC**
+```text
+notapadd.exe
+PID: 2392
+PPID: 1072
+```
 
-The process appeared in `psscan` but not in the active `pslist` output.
+was found by the memory scan.
+
+Important details included:
+
+- Create time: `2023-11-17 15:35:16 UTC`
+- Exit time: `2023-11-17 15:35:38 UTC`
+- The process was not present in the normal `pslist` output.
 
 ### Result
 
-`notapadd.exe` was identified as a terminated process artifact and selected for further investigation.
+`notapadd.exe` was identified as a **terminated process artifact** in memory. Its presence required further investigation, but `psscan` alone does not prove that the process was malicious.
 
 ---
 
-## Step 7: Analyze the Process Tree
+## Step 6: Examine the Process Tree
 
-The `windows.pstree` plugin was used to examine parent-child process relationships.
+The `windows.pstree` plugin was used to understand parent-child process relationships.
 
 ### Command
 
@@ -216,19 +193,19 @@ python3 vol.py -f lasten.raw windows.pstree
 
 ### Observation
 
-The process hierarchy showed normal Windows processes along with applications such as `FIFA23.exe`, `notepad.exe`, WAMP processes, and other processes.
+The process hierarchy showed normal Windows parent-child relationships. For example, `explorer.exe` (PID 1072) was associated with several user processes, including `FIFA23.exe`.
 
-`notapadd.exe` was not present in the current process tree because it had already terminated.
+The terminated `notapadd.exe` process was not displayed in the process tree because it was no longer part of the active process hierarchy.
 
 ### Result
 
-Process relationships were successfully analyzed.
+The process tree helped establish process relationships and distinguish active processes from the terminated process artifact found by `psscan`.
 
 ---
 
-## Step 8: Examine Process Command Lines
+## Step 7: Examine Command-Line Arguments
 
-The `windows.cmdline` plugin was used to identify command-line arguments and execution paths.
+The `windows.cmdline` plugin was used to determine how processes were launched.
 
 ### Command
 
@@ -238,25 +215,49 @@ python3 vol.py -f lasten.raw windows.cmdline
 
 ### Observation
 
-An important entry was:
+A significant entry was:
 
 ```text
+PID 3596
+notepad.exe
 "C:\Windows\System32\notepad.exe" "C:\Users\vboxuser\AppData\Local\backagainn.ps1"
 ```
 
-Another suspicious application was:
+This shows that `notepad.exe` had opened the file:
 
 ```text
-C:\Users\vboxuser\Downloads\FIFA23.exe
+C:\Users\vboxuser\AppData\Local\backagainn.ps1
 ```
+
+Other command-line entries included `FIFA23.exe`, WAMP processes, and `DumpIt.exe`.
 
 ### Result
 
-The command-line analysis provided important clues about files and scripts that were present or accessed during the memory capture.
+The command-line analysis provided a direct reference to `backagainn.ps1`, making it an important artifact for further investigation.
 
 ---
 
-## Step 9: Analyze Network Connections
+## Step 8: Check the Terminated Process Command Line
+
+The command line of PID 2392 was checked separately.
+
+### Command
+
+```bash
+python3 vol.py -f lasten.raw windows.cmdline --pid 2392
+```
+
+### Observation
+
+Only the column headers were returned and no command-line entry was recovered for PID 2392.
+
+### Result
+
+A command line for the terminated `notapadd.exe` process could not be recovered from this plugin.
+
+---
+
+## Step 9: Analyze Network Artifacts
 
 The `windows.netscan` plugin was used to examine network connections and listening sockets.
 
@@ -268,51 +269,208 @@ python3 vol.py -f lasten.raw windows.netscan
 
 ### Observation
 
-Several Windows services and applications had network-related artifacts.
+Network artifacts included normal Windows listeners and services. Examples included:
 
-`mysqld.exe` was observed listening on port **3307**.
+- SMB-related listeners on ports 139 and 445
+- LSASS-related listening activity
+- MariaDB/MySQL listening on port **3307**
 
-No active connection to **149.100.50.25:4444** was directly confirmed in the `netscan` output.
+No confirmed active connection to:
+
+```text
+149.100.50.25:4444
+```
+
+was observed in the `netscan` output.
 
 ### Result
 
-Network artifacts were successfully identified and the suspicious IP/port was investigated further using memory strings.
+Network artifacts were recovered from memory. The reverse-shell IP and port were not confirmed as an active network connection at the time represented by the memory image.
 
 ---
 
-## Step 10: Scan Files in Memory
+## Step 10: Scan Memory for File Objects
 
-The `windows.filescan` plugin was used to find file objects present in memory.
+The `windows.filescan` plugin was used to search memory for file objects related to suspicious artifacts.
 
 ### Command
 
 ```bash
-python3 vol.py -f lasten.raw windows.filescan
+python3 vol.py -f lasten.raw windows.filescan | grep -Ei 'backagainn|notapadd|FIFA23|InfoBank|Bank_Info|aa\.txt|\.ps1'
 ```
 
 ### Observation
 
-Important file artifacts included:
+Important file references included:
 
 ```text
-C:\Users\vboxuser\Desktop\notapadd.exe
-C:\Users\vboxuser\AppData\Local\backagainn.ps1
-C:\Users\vboxuser\AppData\Local\Createback.ps1
-C:\Users\vboxuser\Desktop\InfoBank.txt
-C:\Users\vboxuser\Downloads\FIFA23.exe
+\Users\vboxuser\Downloads\FIFA23.exe
+\Users\vboxuser\Desktop\notapadd.exe
+\Users\vboxuser\Desktop\InfoBank.txt
+\Users\vboxuser\AppData\Local\Createback.ps1
+\Users\vboxuser\AppData\Local\backagainn.ps1
 ```
 
-Windows Error Reporting entries related to `notapadd.exe` were also present.
+Windows Error Reporting files referring to `notapadd.exe` were also present.
 
 ### Result
 
-Suspicious executable and PowerShell script artifacts were identified in memory.
+Multiple suspicious or investigation-relevant file artifacts were identified in memory.
 
 ---
 
-## Step 11: Analyze Suspicious Memory Using Malfind
+## Step 11: Attempt to Recover the PowerShell Script
 
-The `windows.malfind` plugin was used to check for potentially injected or suspicious executable memory regions.
+The file object for `backagainn.ps1` was located by `filescan`. Its cached contents were then checked using `dumpfiles`.
+
+### Command
+
+```bash
+python3 vol.py -f lasten.raw windows.dumpfiles --virtaddr 0x7fa1cc80
+```
+
+### Observation
+
+No file object was returned and no recovered file was produced from this virtual address.
+
+### Result
+
+The `backagainn.ps1` file reference was present in memory, but its contents could not be recovered using `dumpfiles` from the identified virtual address.
+
+Therefore, the script contents should **not** be claimed to have been extracted directly using `dumpfiles`.
+
+---
+
+## Step 12: Search the Memory Image Using Strings
+
+The Linux `strings` command was used to extract readable text from the raw memory image.
+
+### Command
+
+```bash
+strings -a -n 8 lasten.raw | less
+```
+
+### Observation
+
+Readable strings related to user files, PowerShell, Windows commands, and suspicious filenames were found.
+
+### Result
+
+The `strings` output provided additional artifacts for correlation with the Volatility results.
+
+---
+
+## Step 13: Search for PowerShell and Command-Execution Artifacts
+
+A targeted search was performed for PowerShell and command-execution indicators.
+
+### Command
+
+```bash
+strings -a -n 8 lasten.raw | grep -Ei 'powershell|Invoke-WebRequest|Invoke-Expression|IEX|New-Object|Net\.TcpClient|DownloadString|Start-Process|ScheduledTask|schtasks|Set-ItemProperty' | head -200
+```
+
+### Observation
+
+Important strings included:
+
+```text
+Microsoft.PowerShell.ConsoleHost
+schtasks.exe /delete
+schtasks.exe /create /tn "defender monitor"
+```
+
+A PowerShell reverse-shell script was also recovered from memory strings. It contained:
+
+```text
+$LHOST = "149.100.50.25"
+$LPORT = 4444
+New-Object Net.Sockets.TCPClient
+Invoke-Expression
+```
+
+A scheduled-task PowerShell script was also present, including:
+
+```text
+New-ScheduledTaskAction
+New-ScheduledTaskTrigger
+New-ScheduledTask
+Register-ScheduledTask
+-TaskName "Backagainn"
+```
+
+### Result
+
+The memory image contained strong evidence of **PowerShell-based command execution, scheduled-task persistence, and reverse-shell functionality**.
+
+---
+
+## Step 14: Correlate the Main Suspicious Indicators
+
+The important filenames, IP address, port, and task name were searched together.
+
+### Command
+
+```bash
+strings -a -n 8 lasten.raw | grep -Ei '149\.100\.50\.25|4444|Backagainn|backagainn\.ps1|notapadd\.exe' | head -100
+```
+
+### Observation
+
+The output contained references to:
+
+```text
+notapadd.exe
+C:\Users\vboxuser\Desktop\notapadd.exe
+backagainn.lnk
+C:\Users\vboxuser\AppData\Local\backagainn.ps1
+149.100.50.25
+4444
+Net.Sockets.TCPClient
+Invoke-Expression
+Backagainn
+```
+
+### Result
+
+The artifacts were strongly correlated with a PowerShell-based suspicious activity chain. However, the available memory evidence does not by itself prove that `notapadd.exe` directly launched `backagainn.ps1`.
+
+---
+
+## Step 15: Search Specifically for the Suspicious Script
+
+### Command
+
+```bash
+strings -a -n 6 lasten.raw | grep -i -A 30 -B 10 "backagainn.ps1"
+```
+
+### Observation
+
+References to `backagainn.ps1` were found, including:
+
+```text
+C:\Users\vboxuser\AppData\Local\backagainn.ps1
+```
+
+and a command-line reference showing:
+
+```text
+"C:\Windows\System32\notepad.exe" "C:\Users\vboxuser\AppData\Local\backagainn.ps1"
+```
+
+Browser-history style strings also referenced the same file.
+
+### Result
+
+The presence and use/reference of `backagainn.ps1` were supported by multiple memory artifacts.
+
+---
+
+## Step 16: Check for Memory Injection in the Terminated Process
+
+The `windows.malfind` plugin was used to check PID 2392 for suspicious memory regions.
 
 ### Command
 
@@ -322,328 +480,90 @@ python3 vol.py -f lasten.raw windows.malfind --pid 2392
 
 ### Observation
 
-No findings were reported for PID **2392**.
+The command produced no findings for PID 2392. A deprecation warning was also displayed because the plugin interface has been renamed in the Volatility 3 framework.
 
 ### Result
 
-No evidence of process injection was identified for `notapadd.exe` using `malfind`.
+No injected-memory finding was recovered for PID 2392 using `malfind`. Therefore, memory injection should not be claimed based on this analysis.
 
 ---
 
-## Step 12: Check the Suspicious Process Command Line
+## Step 17: Final IOC Search
 
-The command line of `notapadd.exe` was checked separately.
+A final combined search was used to correlate the main indicators.
 
 ### Command
 
 ```bash
-python3 vol.py -f lasten.raw windows.cmdline --pid 2392
+strings -a -n 8 lasten.raw | grep -Ei 'notapadd\.exe|backagainn\.ps1|Backagainn|149\.100\.50\.25|4444|powershell|schtasks|TCPClient|Invoke-Expression'
 ```
 
 ### Observation
 
-No command-line information was recovered for PID 2392.
-
-### Result
-
-The command-line information for the terminated process could not be recovered.
-
----
-
-## Step 13: Attempt to Dump Cached Files
-
-The `windows.dumpfiles` plugin was used to attempt recovery of cached file contents.
-
-### Command
-
-```bash
-python3 vol.py -f lasten.raw windows.dumpfiles
-```
-
-### Observation
-
-Volatility attempted to recover cached file objects, but the required contents of `backagainn.ps1` were not successfully recovered.
-
-### Result
-
-Direct recovery of the required cached script contents was unsuccessful.
-
----
-
-## Step 14: Search for Suspicious File Names
-
-The Linux `strings` command was used to search readable strings in the raw memory image.
-
-### Command
-
-```bash
-strings -a -n 8 lasten.raw | grep -Ei 'notapadd|backagainn|FIFA23|InfoBank|Bank_Info'
-```
-
-### Observation
-
-References to the following artifacts were found:
+The search returned multiple related indicators:
 
 - `notapadd.exe`
 - `backagainn.ps1`
-- `FIFA23.exe`
-- `InfoBank.txt`
-- `Bank_Info.txt`
-
-### Result
-
-Multiple suspicious file artifacts were confirmed in the memory image.
-
----
-
-## Step 15: Search for PowerShell Activity
-
-PowerShell-related strings were searched in the memory image.
-
-### Command
-
-```bash
-strings -a -n 8 lasten.raw | grep -Ei 'powershell|IEX|Invoke-Expression|New-Object|schtasks'
-```
-
-### Observation
-
-Important strings included:
-
-```text
-powershell
-New-Object
-Invoke-Expression
-schtasks.exe
-```
-
-### Result
-
-The memory image contained evidence of PowerShell-based activity.
-
----
-
-## Step 16: Search for Scheduled Task Persistence
-
-Scheduled-task related strings were searched to investigate persistence.
-
-### Command
-
-```bash
-strings -a -n 8 lasten.raw | grep -Ei 'ScheduledTask|schtasks|Backagainn'
-```
-
-### Observation
-
-The memory image contained strings such as:
-
-```text
-schtasks.exe /create /tn "defender monitor"
-```
-
-and PowerShell code containing:
-
-```text
-New-ScheduledTask
-TaskName "Backagainn"
-Register-ScheduledTask
-```
-
-### Result
-
-Evidence of scheduled-task based persistence was identified in memory.
-
----
-
-## Step 17: Search for Suspicious IP Address and Port
-
-The suspicious IP address and port were searched in the raw memory.
-
-### Command
-
-```bash
-strings -a -n 8 lasten.raw | grep -Ei '149\.100\.50\.25|4444'
-```
-
-### Observation
-
-The following network indicators were found:
-
-```text
-149.100.50.25
-4444
-```
-
-### Result
-
-The memory image contained an artifact referencing communication with **149.100.50.25 on port 4444**.
-
----
-
-## Step 18: Search for Reverse-Shell Indicators
-
-Reverse-shell related strings were searched.
-
-### Command
-
-```bash
-strings -a -n 8 lasten.raw | grep -Ei 'TCPClient|NetworkStream|StreamReader|StreamWriter|Invoke-Expression'
-```
-
-### Observation
-
-The following PowerShell components were found:
-
-```text
-Net.Sockets.TCPClient
-NetworkStream
-StreamReader
-StreamWriter
-Invoke-Expression
-```
-
-A PowerShell script artifact also contained the target:
-
-```text
-$LHOST = "149.100.50.25"
-$LPORT = 4444
-```
-
-### Result
-
-A PowerShell reverse-shell script artifact was identified in the memory image.
-
----
-
-## Step 19: Investigate `backagainn.ps1`
-
-The suspicious PowerShell script was searched with surrounding strings.
-
-### Command
-
-```bash
-strings -a -n 6 lasten.raw | grep -i -A 30 -B 10 'backagainn.ps1'
-```
-
-### Observation
-
-References to the script were found, including:
-
-```text
-C:\Users\vboxuser\AppData\Local\backagainn.ps1
-```
-
-The memory also contained references showing that the script had been accessed/opened.
-
-### Result
-
-`backagainn.ps1` was confirmed as an important memory-resident artifact.
-
----
-
-## Step 20: Investigate `notapadd.exe`
-
-References to the suspicious executable were searched.
-
-### Command
-
-```bash
-strings -a -n 8 lasten.raw | grep -Ei 'notapadd.exe'
-```
-
-### Observation
-
-The following path was found:
-
-```text
-C:\Users\vboxuser\Desktop\notapadd.exe
-```
-
-### Result
-
-The `notapadd.exe` executable was confirmed as an artifact present in the memory image.
-
----
-
-## Step 21: Search the PowerShell Script Path
-
-The PowerShell script path was searched directly.
-
-### Command
-
-```bash
-strings -a -n 8 lasten.raw | grep -Ei 'backagainn.ps1'
-```
-
-### Observation
-
-Multiple references to:
-
-```text
-C:\Users\vboxuser\AppData\Local\backagainn.ps1
-```
-
-were found.
-
-### Result
-
-The presence of the suspicious PowerShell script was confirmed.
-
----
-
-## Step 22: Perform Final IOC Search
-
-A combined search was performed to correlate the major indicators.
-
-### Command
-
-```bash
-strings -a -n 8 lasten.raw | grep -Ei 'notapadd|backagainn|149\.100\.50\.25|4444|schtasks|powershell'
-```
-
-### Observation
-
-Multiple related indicators were found:
-
-- `notapadd.exe`
-- `backagainn.ps1`
-- `powershell`
-- `schtasks`
 - `Backagainn`
 - `149.100.50.25`
 - `4444`
-
-Additional reverse-shell indicators included:
-
-- `TCPClient`
-- `NetworkStream`
+- PowerShell
+- `schtasks`
+- `Net.Sockets.TCPClient`
 - `Invoke-Expression`
 
 ### Result
 
-The final IOC search correlated the suspicious executable, PowerShell activity, scheduled-task persistence, and reverse-shell script artifacts.
+The final IOC search correlated the main artifacts discovered during the investigation and provided strong evidence of suspicious PowerShell activity and persistence-related artifacts.
 
 ---
 
-# Overall Result
+# OBSERVATION SUMMARY
 
-The `lasten.raw` Windows 7 SP1 64-bit memory image was successfully analyzed using Volatility 3.
+| Investigation | Important Observation |
+|---|---|
+| `windows.info` | Windows 7 SP1 64-bit |
+| `windows.pslist` | `FIFA23.exe`, `backagainn.ps1` reference through Notepad, other user processes |
+| `windows.psscan` | Terminated `notapadd.exe`, PID 2392 |
+| `windows.pstree` | Process hierarchy and parent-child relationships |
+| `windows.cmdline` | PID 3596 opened `backagainn.ps1` |
+| `windows.netscan` | Network artifacts found; no confirmed active `149.100.50.25:4444` connection |
+| `windows.filescan` | `notapadd.exe`, `backagainn.ps1`, `Createback.ps1`, `FIFA23.exe` references |
+| `windows.dumpfiles` | `backagainn.ps1` contents not recovered |
+| `strings` | PowerShell, scheduled-task, reverse-shell, and IOC strings |
+| `windows.malfind` | No finding for PID 2392 |
 
-The investigation identified:
+---
 
-1. A terminated process named **`notapadd.exe` (PID 2392)**.
-2. References to **`backagainn.ps1`** and **`Createback.ps1`**.
-3. PowerShell-related activity.
-4. Scheduled-task persistence indicators involving **`Backagainn`**.
-5. A suspicious PowerShell reverse-shell artifact referencing **`149.100.50.25:4444`**.
-6. Use of `Net.Sockets.TCPClient`, `NetworkStream`, and `Invoke-Expression`.
-7. No `malfind` evidence of process injection for PID 2392.
-8. No confirmed active connection to `149.100.50.25:4444` in the `netscan` output at the time represented by the memory image.
+# OVERALL RESULT
 
-## Conclusion
+The `lasten.raw` Windows memory image was successfully analyzed using **Volatility 3 Framework 2.28.2**.
 
-Volatility 3 was used to investigate the Windows memory image through process analysis, process scanning, process-tree analysis, command-line analysis, network analysis, file scanning, memory analysis, and string-based IOC searching.
+The image was identified as a **Windows 7 SP1 64-bit** system. Process analysis identified normal system processes as well as investigation-relevant artifacts such as `FIFA23.exe` and the terminated `notapadd.exe` process (PID 2392).
 
-The combined evidence indicates **strong signs of malicious PowerShell activity and persistence**, including a scheduled task and reverse-shell code. The reverse-shell code was recovered as a memory/script artifact; therefore, it should not be stated that the reverse shell was definitely active during the memory capture.
+Further analysis identified the file:
 
-The experiment demonstrates how memory forensics can be used to recover and correlate evidence from a suspicious Windows system without relying only on files stored on disk.
+```text
+C:\Users\vboxuser\AppData\Local\backagainn.ps1
+```
+
+and memory strings containing PowerShell commands associated with:
+
+- scheduled-task creation,
+- the task name `Backagainn`,
+- `Net.Sockets.TCPClient`,
+- remote host `149.100.50.25`,
+- port `4444`,
+- and `Invoke-Expression`.
+
+These artifacts provide strong evidence of suspicious PowerShell-based activity and persistence mechanisms in the memory image.
+
+However, the investigation did **not** confirm an active connection to `149.100.50.25:4444`, did **not** recover the contents of `backagainn.ps1` using `dumpfiles`, and did **not** find a `malfind` result for PID 2392.
+
+---
+
+# CONCLUSION
+
+This experiment demonstrated how **Volatility 3** can be used for Windows memory forensics. By combining Volatility plugins such as `windows.info`, `windows.pslist`, `windows.psscan`, `windows.pstree`, `windows.cmdline`, `windows.netscan`, `windows.filescan`, and `windows.malfind` with Linux commands such as `strings` and `grep`, important forensic artifacts were recovered from the `lasten.raw` memory image.
+
+The investigation showed that memory forensics can reveal process artifacts, file references, command-line information, network artifacts, and suspicious PowerShell commands even when complete files or active processes are no longer available.
